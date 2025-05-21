@@ -1,66 +1,90 @@
 import sys
 import time
-from profile_manager import ProfileManager
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from session_manager import SessionManager
 
 class CLI:
     def __init__(self):
-        self.profile_manager = ProfileManager()
+        self.session_manager = SessionManager()
         self.driver = None
+        
+    def setup_browser(self):
+        """Setup a new browser instance"""
+        chrome_options = Options()
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--window-size=1020,720")
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        
+        # Add experimental options
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option("useAutomationExtension", False)
+        
+        return webdriver.Chrome(
+            service=Service(ChromeDriverManager().install()),
+            options=chrome_options
+        )
         
     def display_menu(self):
         """Display the main menu"""
-        print("\n=== Chrome Profile Manager ===")
-        print("1. Create new profile")
-        print("2. Use existing profile")
-        print("3. Delete profile")
-        print("4. List profiles")
+        print("\n=== Browser Session Manager ===")
+        print("1. Create new session")
+        print("2. Use existing session")
+        print("3. Delete session")
+        print("4. List sessions")
         print("5. Exit")
         print("=============================")
         
-    def create_profile(self):
-        """Handle profile creation"""
-        print("\nCreating new profile...")
-        profile_name = input("Enter a name for this profile (or press Enter for auto-generated name): ").strip()
+    def create_session(self):
+        """Handle session creation"""
+        print("\nCreating new session...")
+        session_name = input("Enter a name for this session (or press Enter for auto-generated name): ").strip()
         
         try:
-            profile_name = self.profile_manager.create_profile(profile_name)
-            print(f"\nProfile created: {profile_name}")
-            
-            # Open browser with new profile
-            self.driver = self.profile_manager.setup_browser(profile_name)
+            self.driver = self.setup_browser()
             self.driver.get("https://www.google.com")
             
-            print("\nBrowser opened with new profile.")
-            print("Please log in to your desired website.")
-            print("The profile will automatically save your session.")
-            print("\nPress Enter when you're done...")
+            print("\nBrowser opened.")
+            print("Please navigate to your desired website and log in.")
+            print("When you're done, press Enter to save the session...")
             input()
             
+            saved_name = self.session_manager.save_session(self.driver, session_name)
+            if saved_name:
+                print(f"\nSession saved successfully as: {saved_name}")
+            else:
+                print("\nFailed to save session. Please try again.")
+                
         except Exception as e:
-            print(f"\nError creating profile: {e}")
+            print(f"\nError creating session: {e}")
         finally:
             if self.driver:
                 self.driver.quit()
                 self.driver = None
         
-    def use_profile(self):
-        """Handle using existing profile"""
-        profiles = self.profile_manager.list_profiles()
+    def use_session(self):
+        """Handle using existing session"""
+        sessions = self.session_manager.list_sessions()
         
-        if not profiles:
-            print("\nNo profiles found!")
+        if not sessions:
+            print("\nNo sessions found!")
             return
             
-        print("\nAvailable profiles:")
-        for idx, profile in enumerate(profiles, 1):
-            last_used = profile['last_used'] or 'Never'
-            print(f"{idx}. {profile['name']} (Created: {profile['created_at']}, Last used: {last_used})")
+        print("\nAvailable sessions:")
+        for idx, session in enumerate(sessions, 1):
+            last_used = session['last_used'] or 'Never'
+            print(f"{idx}. {session['name']} (Created: {session['created_at']}, Last used: {last_used})")
+            print(f"   URL: {session['url']}")
             
         while True:
             try:
-                choice = int(input("\nSelect a profile number: "))
-                if 1 <= choice <= len(profiles):
-                    selected_profile = profiles[choice - 1]
+                choice = int(input("\nSelect a session number: "))
+                if 1 <= choice <= len(sessions):
+                    selected_session = sessions[choice - 1]
                     break
                 else:
                     print("Invalid selection. Please try again.")
@@ -68,50 +92,50 @@ class CLI:
                 print("Please enter a valid number.")
                 
         try:
-            self.driver = self.profile_manager.setup_browser(selected_profile['name'])
-            self.driver.get("https://www.google.com")
+            self.driver = self.setup_browser()
+            self.session_manager.load_session(self.driver, selected_session['name'])
             
-            print(f"\nLoaded profile: {selected_profile['name']}")
+            print(f"\nLoaded session: {selected_session['name']}")
             print("Press Enter to close the browser...")
             input()
             
         except Exception as e:
-            print(f"\nError using profile: {e}")
+            print(f"\nError using session: {e}")
         finally:
             if self.driver:
                 self.driver.quit()
                 self.driver = None
                 
-    def delete_profile(self):
-        """Handle profile deletion"""
-        profiles = self.profile_manager.list_profiles()
+    def delete_session(self):
+        """Handle session deletion"""
+        sessions = self.session_manager.list_sessions()
         
-        if not profiles:
-            print("\nNo profiles found!")
+        if not sessions:
+            print("\nNo sessions found!")
             return
             
-        print("\nAvailable profiles:")
-        for idx, profile in enumerate(profiles, 1):
-            print(f"{idx}. {profile['name']} (Created: {profile['created_at']})")
+        print("\nAvailable sessions:")
+        for idx, session in enumerate(sessions, 1):
+            print(f"{idx}. {session['name']} (Created: {session['created_at']})")
             
         while True:
             try:
-                choice = int(input("\nSelect a profile number to delete: "))
-                if 1 <= choice <= len(profiles):
-                    selected_profile = profiles[choice - 1]
+                choice = int(input("\nSelect a session number to delete: "))
+                if 1 <= choice <= len(sessions):
+                    selected_session = sessions[choice - 1]
                     break
                 else:
                     print("Invalid selection. Please try again.")
             except ValueError:
                 print("Please enter a valid number.")
                 
-        confirm = input(f"\nAre you sure you want to delete profile '{selected_profile['name']}'? (y/N): ").strip().lower()
+        confirm = input(f"\nAre you sure you want to delete session '{selected_session['name']}'? (y/N): ").strip().lower()
         if confirm == 'y':
             try:
-                self.profile_manager.delete_profile(selected_profile['name'])
-                print(f"\nProfile '{selected_profile['name']}' deleted successfully.")
+                self.session_manager.delete_session(selected_session['name'])
+                print(f"\nSession '{selected_session['name']}' deleted successfully.")
             except Exception as e:
-                print(f"\nError deleting profile: {e}")
+                print(f"\nError deleting session: {e}")
         else:
             print("\nDeletion cancelled.")
         
@@ -122,20 +146,21 @@ class CLI:
             choice = input("Enter your choice (1-5): ").strip()
             
             if choice == "1":
-                self.create_profile()
+                self.create_session()
             elif choice == "2":
-                self.use_profile()
+                self.use_session()
             elif choice == "3":
-                self.delete_profile()
+                self.delete_session()
             elif choice == "4":
-                profiles = self.profile_manager.list_profiles()
-                if profiles:
-                    print("\nAvailable profiles:")
-                    for profile in profiles:
-                        last_used = profile['last_used'] or 'Never'
-                        print(f"- {profile['name']} (Created: {profile['created_at']}, Last used: {last_used})")
+                sessions = self.session_manager.list_sessions()
+                if sessions:
+                    print("\nAvailable sessions:")
+                    for session in sessions:
+                        last_used = session['last_used'] or 'Never'
+                        print(f"- {session['name']} (Created: {session['created_at']}, Last used: {last_used})")
+                        print(f"  URL: {session['url']}")
                 else:
-                    print("\nNo profiles found!")
+                    print("\nNo sessions found!")
             elif choice == "5":
                 print("\nGoodbye!")
                 sys.exit(0)
