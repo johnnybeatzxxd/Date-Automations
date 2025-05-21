@@ -49,13 +49,18 @@ class CLI:
             self.driver.get("https://www.google.com")
             
             print("\nBrowser opened.")
-            print("Please navigate to your desired website and log in.")
-            print("When you're done, press Enter to save the session...")
+            print("\nYou can now:")
+            print("1. Navigate to multiple websites")
+            print("2. Log in to each website")
+            print("3. Set up any desired state (like filling forms, selecting preferences, etc.)")
+            print("\nAll website sessions will be saved together when you're done.")
+            print("Press Enter when you're finished with all websites...")
             input()
             
             saved_name = self.session_manager.save_session(self.driver, session_name)
             if saved_name:
                 print(f"\nSession saved successfully as: {saved_name}")
+                print("This session contains all website states you've set up.")
             else:
                 print("\nFailed to save session. Please try again.")
                 
