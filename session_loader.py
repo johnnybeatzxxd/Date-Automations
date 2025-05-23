@@ -114,11 +114,10 @@ def load_session_by_index(index: int, proxy_string: str | None = None) -> webdri
             seleniumwire_options=proxy_options
         )
         
-        # Load the session
-        session_manager.load_session(driver, selected_session['name'])
+        # Load the session (without navigating to the saved URL)
+        session_manager.load_session(driver, selected_session['name'], navigate=False)
         
         print(f"Loaded session: {selected_session['name']}")
-        print(f"URL: {selected_session['url']}")
         
         # Store the temporary directory path in the driver for cleanup
         driver._temp_dir = temp_dir
@@ -161,14 +160,14 @@ if __name__ == "__main__":
     print(f"Available sessions: {session_count}")
     
     # Load first session
-    driver1 = load_session_by_index(0, "65.195.108.61:51523:theninthroomagency:excHe93UMY")
+    driver1 = load_session_by_index(1, "65.195.106.153:51523:theninthroomagency:excHe93UMY")
     
     if driver1:
         try:
             # Your automation code for first session
             pass
-            driver1.get("https://whatsmyip.com")
-            time.sleep(300)
+            driver1.get("https://bumble.com")
+            time.sleep(3000)
         finally:
             cleanup_session(driver1)
 

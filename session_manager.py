@@ -132,7 +132,7 @@ class SessionManager:
                     pass
             return None
             
-    def load_session(self, driver, session_name):
+    def load_session(self, driver, session_name, navigate=True):
         """Load saved session into browser"""
         session_path = self.sessions_dir / session_name
         
@@ -148,8 +148,8 @@ class SessionManager:
             with open(session_path / "metadata.json", "r", encoding='utf-8') as f:
                 metadata = json.load(f)
             
-            # First navigate to the original URL
-            if metadata.get('url'):
+            # First navigate to the original URL (only if navigate=True)
+            if navigate and metadata.get('url'):
                 driver.get(metadata['url'])
             
             # Add cookies
