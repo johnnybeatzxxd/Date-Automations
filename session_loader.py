@@ -1,4 +1,4 @@
-from selenium import webdriver
+from seleniumwire import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
@@ -23,12 +23,14 @@ def get_session_count() -> int:
         print(f"Error getting session count: {e}")
         return 0
 
-def load_session_by_index(index: int) -> webdriver.Chrome:
+def load_session_by_index(index: int, proxy_string: str | None = None) -> webdriver.Chrome:
     """
     Load a session by its index and return a configured WebDriver instance.
+    Optionally configures the browser to use a proxy with authentication.
     
     Args:
         index (int): The index of the session to load (0-based)
+        proxy_string (str, optional): Proxy string in the format host:port:username:password.
         
     Returns:
         webdriver.Chrome: Configured WebDriver instance with the session loaded
@@ -52,7 +54,7 @@ def load_session_by_index(index: int) -> webdriver.Chrome:
         # Create a unique temporary directory for this session
         temp_dir = tempfile.mkdtemp(prefix=f"chrome_session_{selected_session['name']}_")
         
-        # Setup browser with anti-detection options
+        # Setup browser with anti-detection options and potentially proxy
         chrome_options = Options()
         
         # Common options for all platforms
@@ -84,10 +86,32 @@ def load_session_by_index(index: int) -> webdriver.Chrome:
         chrome_options.add_experimental_option("useAutomationExtension", False)
         chrome_options.add_experimental_option("detach", True)
         
-        # Create driver instance
+        # Configure proxy if provided
+        proxy_options = {}
+        if proxy_string:
+            try:
+                # Split the proxy string into host, port, username, and password
+                parts = proxy_string.split(':')
+                if len(parts) == 4:
+                    proxy_host, proxy_port, proxy_username, proxy_password = parts
+                    proxy_options = {
+                        'proxy': {
+                            'http': f'http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}',
+                            'https': f'https://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}',
+                            'no_proxy': 'localhost,127.0.0.1'
+                        }
+                    }
+                    print(f"Configuring browser with authenticated proxy: {proxy_host}:{proxy_port}")
+                else:
+                    print(f"Warning: Invalid proxy string format: {proxy_string}. Expected host:port:username:password. Skipping proxy configuration.")
+            except Exception as proxy_err:
+                print(f"Error parsing or applying proxy string {proxy_string}: {proxy_err}. Skipping proxy configuration.")
+        
+        # Create driver instance with proxy options
         driver = webdriver.Chrome(
             service=Service(ChromeDriverManager().install()),
-            options=chrome_options
+            options=chrome_options,
+            seleniumwire_options=proxy_options
         )
         
         # Load the session
@@ -137,19 +161,14 @@ if __name__ == "__main__":
     print(f"Available sessions: {session_count}")
     
     # Load first session
-    driver1 = load_session_by_index(0)
+    driver1 = load_session_by_index(0, "65.195.108.61:51523:theninthroomagency:excHe93UMY")
+    
     if driver1:
         try:
             # Your automation code for first session
             pass
+            driver1.get("https://whatsmyip.com")
+            time.sleep(300)
         finally:
             cleanup_session(driver1)
 
-    # Load second session
-    driver2 = load_session_by_index(1)
-    if driver2:
-        try:
-            # Your automation code for second session
-            pass
-        finally:
-            cleanup_session(driver2)
